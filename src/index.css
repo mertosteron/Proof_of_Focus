@@ -1,0 +1,542 @@
+@import "tailwindcss";
+
+/* ============================================
+   CYBERPUNK GLASSMORPHISM DESIGN SYSTEM
+   POFocus - Proof of Focus Dashboard
+   ============================================ */
+
+/* CSS Custom Properties */
+:root {
+  /* Core Colors */
+  --bg-dark: #09090b;
+  --bg-card: rgba(15, 15, 20, 0.7);
+  
+  /* Neon Colors */
+  --neon-blue: #3b82f6;
+  --neon-purple: #8b5cf6;
+  --neon-turquoise: #06b6d4;
+  --neon-pink: #ec4899;
+  --neon-green: #10b981;
+  
+  /* Glow Intensities */
+  --glow-sm: 0 0 10px;
+  --glow-md: 0 0 20px;
+  --glow-lg: 0 0 40px;
+  --glow-xl: 0 0 60px;
+  
+  /* Typography */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.95);
+  background-color: var(--bg-dark);
+  
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-dark);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   GLASSMORPHISM PANELS
+   ============================================ */
+
+.glass-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s ease;
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================
+   NEON GLOW EFFECTS
+   ============================================ */
+
+.neon-glow-blue {
+  box-shadow: 
+    0 0 5px var(--neon-blue),
+    0 0 10px var(--neon-blue),
+    0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+.neon-glow-purple {
+  box-shadow: 
+    0 0 5px var(--neon-purple),
+    0 0 10px var(--neon-purple),
+    0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+.neon-glow-turquoise {
+  box-shadow: 
+    0 0 5px var(--neon-turquoise),
+    0 0 10px var(--neon-turquoise),
+    0 0 20px rgba(6, 182, 212, 0.5);
+}
+
+.neon-text-blue {
+  color: var(--neon-blue);
+  text-shadow: 
+    0 0 5px var(--neon-blue),
+    0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.neon-text-purple {
+  color: var(--neon-purple);
+  text-shadow: 
+    0 0 5px var(--neon-purple),
+    0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.neon-text-turquoise {
+  color: var(--neon-turquoise);
+  text-shadow: 
+    0 0 5px var(--neon-turquoise),
+    0 0 10px rgba(6, 182, 212, 0.5);
+}
+
+/* ============================================
+   HOLOGRAPHIC TIMER
+   ============================================ */
+
+.holographic-timer {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(139, 92, 246, 0.1) 50%,
+    rgba(6, 182, 212, 0.1) 100%
+  );
+  text-shadow: 
+    0 0 10px rgba(59, 130, 246, 0.8),
+    0 0 20px rgba(139, 92, 246, 0.6),
+    0 0 40px rgba(6, 182, 212, 0.4);
+  animation: holographic-pulse 3s ease-in-out infinite;
+}
+
+@keyframes holographic-pulse {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.95;
+    filter: brightness(1.1);
+  }
+}
+
+/* Circular Progress Ring */
+.progress-ring {
+  position: relative;
+}
+
+.progress-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--neon-blue) 0%,
+    var(--neon-purple) 33%,
+    var(--neon-turquoise) 66%,
+    var(--neon-blue) 100%
+  );
+  animation: ring-rotate 4s linear infinite;
+  opacity: 0.6;
+  filter: blur(8px);
+}
+
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Pulsating Ring Animation */
+.pulse-ring {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(59, 130, 246, 0.4),
+      0 0 40px rgba(139, 92, 246, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(59, 130, 246, 0.6),
+      0 0 60px rgba(139, 92, 246, 0.4);
+  }
+}
+
+/* ============================================
+   GLOWING AVATAR
+   ============================================ */
+
+.avatar-glow {
+  position: relative;
+}
+
+.avatar-glow::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--neon-blue),
+    var(--neon-purple),
+    var(--neon-turquoise)
+  );
+  animation: avatar-rotate 6s linear infinite;
+  z-index: -1;
+}
+
+.avatar-glow::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--neon-blue),
+    var(--neon-purple),
+    var(--neon-turquoise)
+  );
+  animation: avatar-rotate 6s linear infinite reverse;
+  opacity: 0.4;
+  filter: blur(15px);
+  z-index: -2;
+}
+
+@keyframes avatar-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   SIDEBAR NEON ICONS
+   ============================================ */
+
+.sidebar-icon {
+  transition: all 0.3s ease;
+}
+
+.sidebar-icon:hover {
+  filter: drop-shadow(0 0 8px var(--neon-blue));
+}
+
+.sidebar-icon-active {
+  filter: drop-shadow(0 0 10px var(--neon-blue)) drop-shadow(0 0 20px rgba(59, 130, 246, 0.5));
+}
+
+/* ============================================
+   CONNECTED WALLET CARD
+   ============================================ */
+
+.wallet-card {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.1) 0%,
+    rgba(6, 182, 212, 0.05) 100%
+  );
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(16, 185, 129, 0.1);
+}
+
+.wallet-connected-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--neon-green);
+  box-shadow: 0 0 10px var(--neon-green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.2); }
+}
+
+/* ============================================
+   BLOCKCHAIN NETWORK BACKGROUND
+   ============================================ */
+
+.cyber-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: 
+    radial-gradient(ellipse at 20% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%),
+    var(--bg-dark);
+}
+
+.cyber-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-move 20s linear infinite;
+}
+
+@keyframes grid-move {
+  from { transform: translateY(0); }
+  to { transform: translateY(50px); }
+}
+
+/* Floating particles */
+.cyber-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cyber-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--neon-blue);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--neon-blue);
+  animation: float-up 10s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(100vh) translateX(0);
+    opacity: 0;
+  }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% {
+    transform: translateY(-100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   STAT CARDS
+   ============================================ */
+
+.stat-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(59, 130, 246, 0.1);
+}
+
+.stat-icon {
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px currentColor);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.cyber-button {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.2) 0%,
+    rgba(139, 92, 246, 0.2) 100%
+  );
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.4) 0%,
+    rgba(139, 92, 246, 0.4) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cyber-button:hover::before {
+  opacity: 1;
+}
+
+.cyber-button:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.3),
+    inset 0 0 20px rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
+}
+
+.cyber-button-primary {
+  background: linear-gradient(
+    135deg,
+    var(--neon-blue) 0%,
+    var(--neon-purple) 100%
+  );
+  border: none;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+}
+
+.cyber-button-primary:hover {
+  box-shadow: 
+    0 6px 30px rgba(59, 130, 246, 0.6),
+    0 0 40px rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+/* ============================================
+   RANGE SLIDER (Enhanced)
+   ============================================ */
+
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.8);
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.8);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.text-gradient-cyber {
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple), var(--neon-turquoise));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.border-gradient-cyber {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--bg-dark), var(--bg-dark)) padding-box,
+              linear-gradient(135deg, var(--neon-blue), var(--neon-purple)) border-box;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
