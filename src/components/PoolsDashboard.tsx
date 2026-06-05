@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
-import { PlusCircle, Users, Copy, ArrowRight, Lock, Globe } from 'lucide-react'
-import { usePools } from '../hooks/usePools'
+import { PlusCircle, Users, Copy, ArrowRight } from 'lucide-react'
+import { usePools, type PoolSummary } from '../hooks/usePools'
 
 export function PoolsDashboard() {
     const [mode, setMode] = useState<'list' | 'create' | 'join'>('list')
     const [stakeInput, setStakeInput] = useState('1')
     const [poolIdInput, setPoolIdInput] = useState('')
-    const [pools, setPools] = useState<any[]>([])
+    const [pools, setPools] = useState<PoolSummary[]>([])
     const [joinedPools, setJoinedPools] = useState<Set<string>>(new Set())
     const [joinDuration, setJoinDuration] = useState('5') // minutes
     const [workDuration, setWorkDuration] = useState('25') // minutes
+    // Drives the live "Xm left" countdown; updated once a second so the render
+    // stays a pure function of state instead of calling Date.now() inline.
+    const [now, setNow] = useState(() => Date.now())
     const { createPool, joinPool, fetchPools, fetchUserParticipation } = usePools()
 
     useEffect(() => {
@@ -17,7 +20,13 @@ export function PoolsDashboard() {
             fetchPools().then(data => setPools(data))
             fetchUserParticipation().then(data => setJoinedPools(data))
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mode])
+
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 1000)
+        return () => clearInterval(interval)
+    }, [])
 
     const handleCreate = () => {
         // Durations in MS
@@ -29,7 +38,7 @@ export function PoolsDashboard() {
     }
 
     const formatTimeLeft = (endMs: string) => {
-        const diff = Number(endMs) - Date.now()
+        const diff = Number(endMs) - now
         if (diff <= 0) return "Closed"
         const mins = Math.floor(diff / 60000)
         return `${mins}m left`
@@ -81,68 +90,34 @@ export function PoolsDashboard() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {pools.map(pool => (
-                                    <div
-                                        key={pool.id}
-                                        className="group relative rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02]"
-                                        style={{
-                                            background: 'rgba(255, 255, 255, 0.03)',
-                                            backdropFilter: 'blur(12px)',
-                                            border: '1px solid rgba(255, 255, 255, 0.08)',
-                                            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)'
-                                        }}
-                                    >
-                                        {/* Hover Glow Effect */}
-                                        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                                            style={{
-                                                boxShadow: '0 0 30px rgba(59, 130, 246, 0.15), inset 0 0 20px rgba(59, 130, 246, 0.05)',
-                                                border: '1px solid rgba(59, 130, 246, 0.3)'
-                                            }}
-                                        />
-
-                                        {/* Header Row */}
-                                        <div className="flex justify-between items-start mb-4 relative z-10">
+                                    <div key={pool.id} className="bg-black/20 border border-white/10 rounded-xl p-6 hover:border-blue-500/50 transition-colors">
+                                        <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <h4 className="font-bold text-lg text-white mb-1">
-                                                    {pool.name || 'Focus Pool'}
-                                                </h4>
-                                                <p className="text-xs text-gray-500">by {pool.creator?.slice(0, 6) || 'anon'}...{pool.creator?.slice(-4) || ''}</p>
+                                                <h4 className="font-bold text-lg text-white">Focus Pool</h4>
+                                                <div className="flex gap-2 mt-1">
+                                                    <span className="text-[10px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded">
+                                                        Join: {formatTimeLeft(pool.join_window_end)}
+                                                    </span>
+                                                    <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">
+                                                        Target: {Number(pool.target_duration) / 60000}m
+                                                    </span>
+                                                </div>
                                             </div>
-                                            {/* Privacy Badge */}
-                                            <span className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full ${pool.visibility === 'private'
-                                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/20'
-                                                : 'bg-green-500/20 text-green-300 border border-green-500/20'
-                                                }`}>
-                                                {pool.visibility === 'private' ? <Lock size={10} /> : <Globe size={10} />}
-                                                {pool.visibility === 'private' ? 'Private' : 'Public'}
-                                            </span>
+                                            <div className="text-right">
+                                                <div className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold mb-1">
+                                                    {Number(pool.stake_amount) / 1_000_000_000} SUI
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 font-mono">{pool.id.slice(0, 6)}...{pool.id.slice(-4)}</p>
+                                            </div>
                                         </div>
 
-                                        {/* Stake Amount - Featured */}
-                                        <div className="mb-4 p-3 rounded-xl relative z-10"
-                                            style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))' }}>
-                                            <div className="text-2xl font-bold text-white">
-                                                {Number(pool.stake_amount) / 1_000_000_000} <span className="text-sm text-blue-400">SUI</span>
-                                            </div>
-                                            <p className="text-[10px] text-gray-400">stake required</p>
-                                        </div>
-
-                                        {/* Info Row */}
-                                        <div className="flex items-center gap-4 text-sm text-gray-400 mb-4 relative z-10">
+                                        <div className="flex gap-4 text-sm text-gray-400 mb-6">
                                             <div className="flex items-center gap-2">
-                                                <Users size={14} className="text-blue-400" />
-                                                <span className="font-medium text-white">{pool.participants || 0}</span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded">
-                                                    {formatTimeLeft(pool.join_window_end)}
-                                                </span>
-                                                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded">
-                                                    {Number(pool.target_duration) / 60000}m target
-                                                </span>
+                                                <Users size={14} />
+                                                <span>{pool.participants} Joined</span>
                                             </div>
                                         </div>
 
-                                        {/* Join Button */}
                                         <button
                                             onClick={() => {
                                                 setPoolIdInput(pool.id)
@@ -150,12 +125,12 @@ export function PoolsDashboard() {
                                                 setMode('join')
                                             }}
                                             disabled={joinedPools.has(pool.id)}
-                                            className={`w-full py-3 rounded-xl font-bold text-sm transition-all relative z-10 ${joinedPools.has(pool.id)
-                                                ? 'bg-green-500/10 text-green-400 cursor-not-allowed border border-green-500/20'
-                                                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-blue-500/20'
+                                            className={`w-full py-3 rounded-lg font-bold text-sm transition-colors ${joinedPools.has(pool.id)
+                                                ? 'bg-green-500/10 text-green-500 cursor-not-allowed border border-green-500/20'
+                                                : 'bg-white/5 hover:bg-white/15 text-white'
                                                 }`}
                                         >
-                                            {joinedPools.has(pool.id) ? '✓ Joined' : 'Join Pool'}
+                                            {joinedPools.has(pool.id) ? 'Already Joined' : 'Join Pool'}
                                         </button>
                                     </div>
                                 ))}

@@ -5,16 +5,15 @@ export function useIdleDetection() {
     const [idleTime, setIdleTime] = useState(0)
 
     useEffect(() => {
-        // @ts-ignore - types not synced yet for custom preload
         if (!window.ipcRenderer?.onIdleStatusChange) {
-            console.warn("IPC Not found")
+            // Running in a plain browser (vite dev without Electron) — no idle bridge.
+            console.warn("IPC bridge not found; idle detection disabled")
             return
         }
 
-        // @ts-ignore
         const cleanup = window.ipcRenderer.onIdleStatusChange((status) => {
             setIsIdle(status.isIdle)
-            if (status.idleTime) setIdleTime(status.idleTime)
+            setIdleTime(status.idleTime ?? 0)
         })
 
         return cleanup

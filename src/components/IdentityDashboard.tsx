@@ -3,11 +3,9 @@ import { Trophy, Activity, Zap, Plus, User, CheckCircle } from 'lucide-react'
 import { useWalletStore } from '../store/useWalletStore'
 import { useSuiClient } from '@mysten/dapp-kit'
 import { Transaction } from '@mysten/sui/transactions'
-import { usePools } from '../hooks/usePools'
-import { SkillShowcase } from './SkillShowcase'
+import { usePools, type PoolSummary } from '../hooks/usePools'
+import { PACKAGE_ID } from '../constants'
 
-// TODO: Move these to a constant file
-const PACKAGE_ID = '0xd92e7706ce871ecc0247f19e03baf31beadb645e0cc2eee3fab516408c5655fd' // Relace with actual
 const MODULE_NAME = 'identity'
 
 interface UserProfile {
@@ -25,12 +23,13 @@ export function IdentityDashboard() {
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(false)
     const [username, setUsername] = useState('')
-    const [isCreating, setIsCreating] = useState(false)
+    const [iSCreating, setIsCreating] = useState(false)
 
     useEffect(() => {
         if (address) {
             fetchProfile()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [address])
 
     const fetchProfile = async () => {
@@ -52,10 +51,10 @@ export function IdentityDashboard() {
                 const obj = objects.data[0]
                 const content = obj.data?.content
                 if (content?.dataType === 'moveObject') {
-                    const fields = content.fields as any
+                    const fields = content.fields as Record<string, unknown>
                     setProfile({
-                        id: obj.data?.objectId!,
-                        username: fields.username,
+                        id: obj.data?.objectId ?? '',
+                        username: String(fields.username),
                         level: Number(fields.level),
                         xp: Number(fields.xp),
                         total_minutes: Number(fields.total_minutes),
@@ -107,7 +106,7 @@ export function IdentityDashboard() {
 
         } catch (e) {
             console.error("Failed to create profile (Exception):", e)
-            alert("Error creating profile: " + (e as any).message)
+            alert("Error creating profile: " + (e as Error).message)
         } finally {
             setIsCreating(false)
         }
@@ -136,11 +135,11 @@ export function IdentityDashboard() {
                     />
                     <button
                         onClick={createProfile}
-                        disabled={!username || isCreating}
+                        disabled={!username || iSCreating}
                         className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
                     >
-                        {isCreating ? 'Minting Profile...' : 'Begin Journey'}
-                        {!isCreating && <Plus size={18} />}
+                        {iSCreating ? 'Minting Profile...' : 'Begin Journey'}
+                        {!iSCreating && <Plus size={18} />}
                     </button>
                 </div>
             </div>
@@ -223,24 +222,6 @@ export function IdentityDashboard() {
                         </div>
                     </div>
 
-                    {/* Skill Badges Showcase */}
-                    <div className="bg-white/5 backdrop-blur-sm border border-white/5 rounded-[32px] p-8">
-                        <SkillShowcase
-                            isLoading={false}
-                            starterNFT={{
-                                id: 'starter-nft-001',
-                                name: 'Novice Explorer',
-                                image_uri: 'ipfs://starter'
-                            }}
-                            skillBadges={[]}
-                            activePFPId="starter-nft-001"
-                            onSetPFP={async (badgeId, pfpType) => {
-                                console.log('Setting PFP:', badgeId, pfpType)
-                                // TODO: Implement blockchain call
-                            }}
-                        />
-                    </div>
-
                     {/* Pools Section (Takes remaining space) */}
                     <div className="flex-1 bg-white/5 backdrop-blur-sm border border-white/5 rounded-[32px] p-8">
                         <ActivePoolsSection />
@@ -254,11 +235,11 @@ export function IdentityDashboard() {
 // Sub-component for Active Pools to check cleanliness
 function ActivePoolsSection() {
     const { fetchPools, fetchUserParticipation, fetchUserClaims, fetchUserProofs, submitProof, claimReward } = usePools()
-    const [myPools, setMyPools] = useState<any[]>([])
+    const [myPools, setMyPools] = useState<PoolSummary[]>([])
     const [claimedPools, setClaimedPools] = useState<Set<string>>(new Set())
     const [proofPools, setProofPools] = useState<Set<string>>(new Set())
     const [loading, setLoading] = useState(true)
-    const [now, setNow] = useState(Date.now())
+    const [now, setNow] = useState(() => Date.now())
 
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 1000)
@@ -282,11 +263,12 @@ function ActivePoolsSection() {
 
             setClaimedPools(claims)
             setProofPools(proofs)
-            const filtered = allPools.filter((p: any) => p && joinedIds.has(p.id))
+            const filtered = allPools.filter((p) => p && joinedIds.has(p.id))
             setMyPools(filtered)
             setLoading(false)
         }
         load()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     if (loading) return <div className="text-center text-gray-500">Loading pools...</div>
@@ -323,7 +305,7 @@ function ActivePoolsSection() {
                         statusColor = 'text-yellow-400'
                         actionButton = (
                             <button
-                                onClick={() => submitProof(pool.id)}
+                                onClick={() => submitProof(pool.id, Number(pool.target_duration))}
                                 className="mt-2 w-full bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
                             >
                                 <CheckCircle size={14} /> Submit Proof

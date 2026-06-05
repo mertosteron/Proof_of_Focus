@@ -2,7 +2,6 @@ module focus_forge::identity {
     use std::string::String;
     use sui::event;
     use focus_forge::focus_block::{FocusBlock};
-    use focus_forge::skill_badge::{Self, SkillBadge, AdminCap};
 
     // Errors
     const EProfileAlreadyExists: u64 = 1;
@@ -66,40 +65,25 @@ module focus_forge::identity {
         transfer::transfer(profile, sender);
     }
 
-    /// Update stats after completing a Focus Block
-    /// This function should be called in the same PTB as minting, or separately.
-    /// It requires the FocusBlock to be passed in (reference) to prove work done.
-    /// We assume the FocusBlock was just minted or exists.
-    public entry fun update_stats(
-        profile: &mut UserProfile,
-        block: &FocusBlock,
-        badge: &mut SkillBadge,
-        progress: &mut focus_forge::skill_badge::SubjectProgress,
-        admin_cap: &focus_forge::skill_badge::AdminCap,
-        ctx: &mut TxContext
-    ) {
-        // Rudimentary check: Ensure the block owner matches profile owner?
-        // Actually, anyone can update their profile with a block they own.
-
-        // Logic:
-        // 1. Add XP (1 min = 1 XP)
-        // 2. Add Time
-        // 3. Increment Session Count
-        
+    /// Update profile stats from a completed Focus Block.
+    ///
+    /// NOTE: This is intentionally a private helper that operates ONLY on the
+    /// caller's own UserProfile + a FocusBlock. The previous version required a
+    /// SkillBadge, a SubjectProgress and an `AdminCap` — but the AdminCap is
+    /// init-transferred to the deployer, so no end user could ever update their
+    /// own stats. SkillBadge evolution is now decoupled from the core stat loop;
+    /// the seed badge minted in `create_profile` remains as a cosmetic token.
+    fun update_stats(profile: &mut UserProfile, block: &FocusBlock) {
+        // 1 minute of focus = 1 XP, 1 minute of tracked time, 1 session.
         let duration = focus_forge::focus_block::duration(block);
-        
+
         profile.total_minutes = profile.total_minutes + duration;
         profile.total_sessions = profile.total_sessions + 1;
         profile.xp = profile.xp + duration;
 
-        // Update SkillBadge progress
-        focus_forge::skill_badge::update_progress(admin_cap, badge, progress, duration, ctx);
-
-        // Level Up Logic
-        // Simple curve: Level = 1 + (XP / 100)
-        // e.g. 0-99 XP = Lvl 1. 100-199 XP = Lvl 2.
+        // Level curve: Level = 1 + (XP / 100). 0-99 XP = Lvl 1, 100-199 = Lvl 2, ...
         let new_level = 1 + (profile.xp / 100);
-        
+
         if (new_level > profile.level) {
             profile.level = new_level;
             event::emit(LevelUp {
@@ -110,12 +94,10 @@ module focus_forge::identity {
         };
     }
 
-    /// Mint a FocusBlock and update stats in one go
+    /// Mint a FocusBlock and update the caller's profile stats in one PTB.
+    /// Callable by any user on their own profile — no capability required.
     public entry fun mint_and_update(
         profile: &mut UserProfile,
-        badge: &mut SkillBadge,
-        progress: &mut focus_forge::skill_badge::SubjectProgress,
-        admin_cap: &focus_forge::skill_badge::AdminCap,
         duration: u64,
         category: String,
         verification_hash: vector<u8>,
@@ -124,23 +106,20 @@ module focus_forge::identity {
         ctx: &mut TxContext
     ) {
         let block = focus_forge::focus_block::new(
-            duration, 
-            category, 
+            duration,
+            category,
             verification_hash,
             idle_threshold,
             idle_detection_enabled,
             ctx
         );
-        update_stats(profile, &block, badge, progress, admin_cap, ctx);
+        update_stats(profile, &block);
         transfer::public_transfer(block, ctx.sender());
     }
-    
-    /// Mint a FocusBlock using settings and update stats
+
+    /// Mint a FocusBlock using on-chain UserSettings and update stats.
     public entry fun mint_with_settings_and_update(
         profile: &mut UserProfile,
-        badge: &mut SkillBadge,
-        progress: &mut focus_forge::skill_badge::SubjectProgress,
-        admin_cap: &focus_forge::skill_badge::AdminCap,
         settings: &focus_forge::focus_block::UserSettings,
         category: String,
         verification_hash: vector<u8>,
@@ -151,11 +130,18 @@ module focus_forge::identity {
             duration,
             category,
             verification_hash,
-            5, // idle_threshold from settings (not exposed yet)
-            true, // idle_detection_enabled (not exposed yet)
+            5, // idle_threshold (settings getter not exposed yet)
+            true, // idle_detection_enabled (settings getter not exposed yet)
             ctx
         );
-        update_stats(profile, &block, badge, progress, admin_cap, ctx);
+        update_stats(profile, &block);
         transfer::public_transfer(block, ctx.sender());
     }
+
+    // ======== Getters ========
+
+    public fun profile_level(p: &UserProfile): u64 { p.level }
+    public fun profile_xp(p: &UserProfile): u64 { p.xp }
+    public fun profile_total_minutes(p: &UserProfile): u64 { p.total_minutes }
+    public fun profile_total_sessions(p: &UserProfile): u64 { p.total_sessions }
 }

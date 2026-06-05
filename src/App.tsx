@@ -1,34 +1,25 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Timer, Users, Shield, Settings, AlertTriangle, Key, LogOut, User, BarChart2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { LayoutDashboard, Timer, Users, Shield, Settings, AlertTriangle, Key, LogOut, Zap, type LucideIcon } from 'lucide-react'
 import { useIdleDetection } from './hooks/useIdleDetection'
+// import { ConnectButton } from '@mysten/dapp-kit' // Unused for manual import
 import { TimerDisplay } from './components/TimerDisplay'
 import { useFocusStore } from './store/useFocusStore'
 import { PoolsDashboard } from './components/PoolsDashboard'
 import { useWalletStore } from './store/useWalletStore'
+import { IdentityDashboard } from './components/IdentityDashboard'
 import { SettingsPage } from './components/SettingsPage'
 import { useSettingsStore } from './store/useSettingsStore'
-import { StatsCards } from './components/StatsCards'
-import { NFTSelectorModal } from './components/NFTSelectorModal'
-import { useActivePFP } from './store/useSessionHistoryStore'
-import { ProfilePage } from './components/ProfilePage'
-import { StatisticsPage } from './components/StatisticsPage'
 
-// Cyberpunk Sidebar Item with Neon Effects
-const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active?: boolean, onClick: () => void }) => (
+// Placeholder components
+const SidebarItem = ({ icon: Icon, label, active, onClick }: { icon: LucideIcon, label: string, active?: boolean, onClick: () => void }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${active
-      ? 'glass-panel neon-glow-blue text-blue-400 border-blue-500/30'
-      : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${active
+      ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20'
+      : 'text-gray-400 hover:bg-white/5 hover:text-white'
       }`}
   >
-    <Icon
-      size={20}
-      className={`transition-all duration-300 ${active
-        ? 'text-blue-400 sidebar-icon-active'
-        : 'text-gray-500 group-hover:text-blue-400 sidebar-icon'
-        }`}
-    />
+    <Icon size={20} className={active ? 'text-blue-400' : 'text-gray-500 group-hover:text-white'} />
     <span className="font-medium">{label}</span>
   </button>
 )
@@ -39,16 +30,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('focus')
   const { isIdle, idleTime } = useIdleDetection()
   const { status, pauseSession, resumeSession, setDuration } = useFocusStore()
-  const [showNFTSelector, setShowNFTSelector] = useState(false)
-  const activePFP = useActivePFP()
-
-  // Memoize particle positions to avoid jittering on re-renders
-  const particleStyles = useMemo(() =>
-    [...Array(20)].map(() => ({
-      left: `${Math.random() * 100}%`,
-      animationDelay: `${Math.random() * 10}s`,
-      animationDuration: `${8 + Math.random() * 6}s`
-    })), [])
 
   // Settings Store
   const settings = useSettingsStore()
@@ -77,6 +58,8 @@ function App() {
     if (savedKey) {
       importKey(savedKey)
     }
+    // Run once on mount; importKey is a stable zustand action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Anti-Cheat: Auto-pause when idle (only if enabled in settings)
@@ -97,28 +80,6 @@ function App() {
 
   return (
     <div className="flex h-screen bg-[#09090b] text-white overflow-hidden font-sans selection:bg-blue-500/30 relative">
-      {/* Cyberpunk Animated Background */}
-      <div className="cyber-background">
-        <div className="cyber-grid" />
-        <div className="cyber-particles">
-          {particleStyles.map((style, i) => (
-            <div
-              key={i}
-              className="cyber-particle"
-              style={style}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* NFT Selector Modal */}
-      <NFTSelectorModal
-        isOpen={showNFTSelector}
-        onClose={() => setShowNFTSelector(false)}
-        starterNFT={{ id: 'starter-001', name: 'Novice Explorer', image_uri: '' }}
-        skillBadges={[]}
-      />
-
       {/* Idle Overlay */}
       {settings.idleDetectionEnabled && isIdle && (
         <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
@@ -132,7 +93,7 @@ function App() {
               <br />Focus session paused to prevent AFK farming.
             </p>
             <button
-              onClick={resumeSession}
+              onClick={() => { if (status === 'paused') resumeSession() }}
               className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors"
             >
               I'm Back
@@ -141,14 +102,14 @@ function App() {
         </div>
       )}
 
-      {/* Cyberpunk Sidebar */}
-      <aside className="w-64 glass-panel border-r border-white/5 p-4 flex flex-col pt-10 relative z-10">
+      {/* Sidebar */}
+      <aside className="w-64 bg-transparent border-r border-white/5 p-4 flex flex-col pt-10">
         <div className="mb-10 px-4">
-          <h1 className="text-2xl font-bold text-gradient-cyber flex items-center gap-2">
-            <Shield size={28} className="text-blue-500 sidebar-icon-active" />
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2">
+            <Shield size={28} className="text-blue-500" />
             POFocus
           </h1>
-          <p className="text-xs text-gray-500 mt-2 font-mono ml-9">v0.2.0-cyber</p>
+          <p className="text-xs text-gray-500 mt-2 font-mono ml-9">v0.1.0-alpha</p>
         </div>
 
         <nav className="flex-1 space-y-2">
@@ -160,21 +121,15 @@ function App() {
           />
           <SidebarItem
             icon={Users}
-            label="Pools"
+            label="Accountability Pools"
             active={activeTab === 'pools'}
             onClick={() => setActiveTab('pools')}
           />
           <SidebarItem
-            icon={User}
-            label="Profile"
-            active={activeTab === 'profile'}
-            onClick={() => setActiveTab('profile')}
-          />
-          <SidebarItem
-            icon={BarChart2}
-            label="Statistics"
-            active={activeTab === 'statistics'}
-            onClick={() => setActiveTab('statistics')}
+            icon={LayoutDashboard}
+            label="Identity & Stats"
+            active={activeTab === 'stats'}
+            onClick={() => setActiveTab('stats')}
           />
         </nav>
 
@@ -207,15 +162,12 @@ function App() {
                 )}
               </div>
             ) : (
-              <div className="wallet-card rounded-xl p-3 text-xs space-y-2">
-                <div className="text-emerald-300 font-bold flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span className="wallet-connected-dot" />
-                    Connected
-                  </span>
-                  <button onClick={disconnect} className="text-red-400 hover:text-white transition-colors"><LogOut size={12} /></button>
+              <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-3 text-xs space-y-2">
+                <div className="text-blue-300 font-bold flex items-center justify-between">
+                  Connected
+                  <button onClick={disconnect} className="text-red-400 hover:text-white"><LogOut size={12} /></button>
                 </div>
-                <div className="font-mono text-gray-300 truncate neon-text-turquoise" title={address || ''}>
+                <div className="font-mono text-gray-400 truncate" title={address || ''}>
                   {address?.slice(0, 6)}...{address?.slice(-4)}
                 </div>
 
@@ -259,58 +211,83 @@ function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         {/* Drag Region for Window Controls */}
-        <div className="h-10 w-full app-region-drag select-none" style={{ WebkitAppRegion: 'drag' } as any}></div>
+        <div className="h-10 w-full app-region-drag select-none" style={{ WebkitAppRegion: 'drag' }}></div>
 
         <div className="flex-1 overflow-y-auto p-8 pt-2">
           {activeTab === 'focus' && (
-            <div className="w-full h-full flex flex-col animate-in fade-in duration-500">
-              {/* Compact Header Row */}
-              <div className="flex-shrink-0 flex items-center justify-between px-2 py-3">
-                <div className="flex items-center gap-6">
-                  {/* User Avatar - Compact */}
-                  <button
-                    onClick={() => setShowNFTSelector(true)}
-                    className="glass-panel glass-panel-hover rounded-xl px-3 py-2 flex items-center gap-3 transition-all hover:scale-[1.02]"
-                  >
-                    {activePFP?.imageUri ? (
-                      <img
-                        src={activePFP.imageUri}
-                        alt={activePFP.name}
-                        className="w-10 h-10 rounded-full object-cover ring-2 ring-cyan-500/50"
-                      />
-                    ) : (
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white ${activePFP?.type === 'skill'
-                        ? 'bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-500'
-                        : 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                        }`}>
-                        {activePFP?.type === 'skill' ? activePFP.name.charAt(0).toUpperCase() : '⭐'}
-                      </div>
-                    )}
-                    <div className="text-left">
-                      <div className="font-medium text-white text-sm">{activePFP?.name || 'Avatar'}</div>
-                      <div className="text-[10px] text-gray-500">Click to change</div>
-                    </div>
-                  </button>
-
-                  {/* Stats Cards - Compact Inline */}
-                  <StatsCards />
+            <div className="w-full h-full flex flex-col space-y-6 animate-in fade-in duration-500">
+              <header className="flex-shrink-0 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold text-white">Ready to Focus?</h2>
+                  <p className="text-gray-400 mt-2">Choose your task and stake your claim.</p>
                 </div>
-
-                {/* Session Duration */}
                 <div className="text-sm text-gray-500">
                   Session: <span className="text-blue-400 font-bold">{settings.focusDuration}min</span>
                 </div>
-              </div>
+              </header>
 
-              {/* Hero Timer - Flex Grow to Fill Space */}
-              <div className="flex-1 min-h-0 p-2">
-                <div className="w-full h-full bg-white/5 border border-white/5 rounded-[32px] p-1 flex flex-col relative shadow-2xl overflow-hidden group">
-                  {/* Decorative Elements */}
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/20 transition-all duration-1000"></div>
-                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-purple-500/20 transition-all duration-1000"></div>
+              {/* Main Dashboard Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1">
 
-                  <div className="flex-1 rounded-[30px] border border-white/5 bg-[#09090b]/50 backdrop-blur-sm flex items-center justify-center relative z-10">
-                    <TimerDisplay />
+                {/* Left: Stats & Context (Sidebar - 4 cols) */}
+                <div className="md:col-span-4 flex flex-col gap-6 h-full">
+                  {/* Level Card - Mini Hero */}
+                  <div className="bg-gradient-to-r from-blue-900/20 to-indigo-900/20 border border-blue-500/20 rounded-3xl p-6 relative overflow-hidden">
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold text-sm">1</div>
+                        <span className="text-blue-200 font-bold uppercase tracking-wider text-xs">Current Level</span>
+                      </div>
+                      <div className="text-3xl font-bold text-white">Novice Focus</div>
+                      <div className="h-1.5 w-full bg-black/50 rounded-full mt-4 overflow-hidden">
+                        <div className="h-full bg-blue-400 w-[10%] shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                      </div>
+                      <p className="text-[10px] text-blue-300 mt-2 text-right">10/100 XP to Level 2</p>
+                    </div>
+                  </div>
+
+                  {/* Quick Stats Grid */}
+                  <div className="grid grid-cols-2 gap-4 flex-1">
+                    <div className="bg-white/5 rounded-3xl border border-white/5 p-5 hover:border-white/10 transition-colors flex flex-col justify-between">
+                      <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 mb-2">
+                        <Timer size={16} />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-white">0m</div>
+                        <div className="text-xs text-gray-500">Today's Focus</div>
+                      </div>
+                    </div>
+                    <div className="bg-white/5 rounded-3xl border border-white/5 p-5 hover:border-white/10 transition-colors flex flex-col justify-between">
+                      <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 mb-2">
+                        <Zap size={16} />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-white">0</div>
+                        <div className="text-xs text-gray-500">Day Streak</div>
+                      </div>
+                    </div>
+                    <div className="col-span-2 bg-white/5 rounded-3xl border border-white/5 p-5 flex items-center justify-between group cursor-pointer hover:border-white/20 transition-all">
+                      <div>
+                        <h4 className="font-bold text-gray-200">History</h4>
+                        <p className="text-xs text-gray-500">View past sessions</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-white/5 group-hover:bg-white/10 flex items-center justify-center transition-colors">
+                        <Settings size={14} className="text-gray-400 group-hover:text-white" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Hero Timer (Main - 8 cols) */}
+                <div className="md:col-span-8 flex flex-col h-full">
+                  <div className="flex-1 bg-white/5 border border-white/5 rounded-[32px] p-1 flex flex-col relative shadow-2xl overflow-hidden group">
+                    {/* Decorative Elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/20 transition-all duration-1000"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 group-hover:bg-purple-500/20 transition-all duration-1000"></div>
+
+                    <div className="flex-1 rounded-[30px] border border-white/5 bg-[#09090b]/50 backdrop-blur-sm flex items-center justify-center relative z-10 w-full h-full">
+                      <TimerDisplay />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -323,19 +300,15 @@ function App() {
             <PoolsDashboard />
           )}
 
-          {activeTab === 'profile' && (
-            <ProfilePage />
-          )}
-
-          {activeTab === 'statistics' && (
-            <StatisticsPage />
+          {activeTab === 'stats' && (
+            <IdentityDashboard />
           )}
 
           {activeTab === 'settings' && (
             <SettingsPage />
           )}
 
-          {!['focus', 'pools', 'profile', 'statistics', 'settings'].includes(activeTab) && (
+          {activeTab !== 'focus' && activeTab !== 'pools' && activeTab !== 'stats' && activeTab !== 'settings' && (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 animate-in fade-in zoom-in duration-300">
               <div className="p-4 bg-white/5 rounded-full mb-4">
                 <Settings size={32} />

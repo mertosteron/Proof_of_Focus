@@ -28,9 +28,20 @@ let win: BrowserWindow | null
 
 function createWindow() {
     win = new BrowserWindow({
-        icon: path.join(process.env.VITE_PUBLIC || process.env.RENDERER_DIST || '', 'electron-vite.svg'),
+        icon: path.join(process.env.VITE_PUBLIC || process.env.RENDERER_DIST || '', 'vite.svg'),
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            // The plugin emits an ES-module preload (preload.mjs) because the
+            // package is "type": "module" — the filename MUST match or the
+            // preload silently never loads (contextBridge never runs, idle
+            // detection dies). ESM preloads require sandbox OFF (see below).
+            preload: path.join(__dirname, 'preload.mjs'),
+            // Security: keep Node out of the renderer and isolate the bridge.
+            // These are the Electron defaults, but we set them explicitly so a
+            // future template bump can't silently weaken them.
+            // NOTE: do NOT enable `sandbox: true` here — sandboxed renderers
+            // don't support ESM (.mjs) preloads, which would break the bridge.
+            contextIsolation: true,
+            nodeIntegration: false,
         },
         width: 1200,
         height: 800,
@@ -44,7 +55,7 @@ function createWindow() {
 
     // Idle Detection Logic
     // Check for idle every 1 second
-    setInterval(() => {
+    const idleInterval = setInterval(() => {
         // Threshold in seconds (e.g. 60s for demo, 5 mins for prod)
         const IDLE_THRESHOLD = 60
         const idleTime = powerMonitor.getSystemIdleTime()
@@ -57,6 +68,13 @@ function createWindow() {
             idleTime
         })
     }, 1000)
+
+    // Stop the interval and release the reference when the window closes,
+    // otherwise the timer keeps firing for the life of the process.
+    win.on('closed', () => {
+        clearInterval(idleInterval)
+        win = null
+    })
 
     // Also handle explicit system locks (e.g. closing lid)
     powerMonitor.on('lock-screen', () => {

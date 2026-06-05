@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { Bell, Clock, Shield, Eye, Palette, Info, Save, RefreshCw, AlertTriangle, LogOut, Lock } from 'lucide-react'
-import { useSettingsStore } from '../store/useSettingsStore'
+import { Bell, Clock, Shield, Eye, Palette, Info, Save, RefreshCw, AlertTriangle, type LucideIcon } from 'lucide-react'
+import { useSettingsStore, type Settings } from '../store/useSettingsStore'
 import { useFocusStore } from '../store/useFocusStore'
-import { useDisconnectWallet } from '@mysten/dapp-kit'
-import { DevToolsPanel } from './DevToolsPanel'
 
-const SettingSection = ({ icon: Icon, title, description, children }: { icon: any, title: string, description: string, children: React.ReactNode }) => (
+const SettingSection = ({ icon: Icon, title, description, children }: { icon: LucideIcon, title: string, description: string, children: React.ReactNode }) => (
   <div className="bg-white/5 border border-white/5 rounded-2xl p-6 hover:border-white/10 transition-all">
     <div className="flex items-start gap-4 mb-6">
       <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
@@ -84,16 +82,7 @@ const SelectSetting = ({ label, description, value, options, onChange }: { label
 export function SettingsPage() {
   const settings = useSettingsStore()
   const { setDuration } = useFocusStore()
-  const { mutate: disconnect } = useDisconnectWallet()
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
-  const [showToast, setShowToast] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
-
-  const showSavedToast = (message: string = 'Settings saved!') => {
-    setToastMessage(message)
-    setShowToast(true)
-    setTimeout(() => setShowToast(false), 2000)
-  }
 
   const handleSave = () => {
     setSaveStatus('saving')
@@ -114,19 +103,11 @@ export function SettingsPage() {
     }
   }
 
-  const updateSetting = <K extends keyof typeof settings>(key: K, value: any) => {
+  const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     settings.updateSettings({ [key]: value })
     // Auto-apply focus duration changes
     if (key === 'focusDuration') {
-      setDuration(value)
-    }
-    showSavedToast()
-  }
-
-  const handleDisconnect = () => {
-    if (confirm('Disconnect your wallet? You will be signed out.')) {
-      disconnect()
-      window.location.reload()
+      setDuration(value as number)
     }
   }
 
@@ -149,10 +130,11 @@ export function SettingsPage() {
           <button
             onClick={handleSave}
             disabled={saveStatus === 'saving'}
-            className={`px-6 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${saveStatus === 'saved'
-              ? 'bg-green-600 text-white'
-              : 'bg-blue-600 hover:bg-blue-500 text-white'
-              }`}
+            className={`px-6 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${
+              saveStatus === 'saved'
+                ? 'bg-green-600 text-white'
+                : 'bg-blue-600 hover:bg-blue-500 text-white'
+            }`}
           >
             <Save size={16} />
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
@@ -211,22 +193,6 @@ export function SettingsPage() {
               enabled={settings.autoStartFocus}
               onChange={(val) => updateSetting('autoStartFocus', val)}
             />
-            <div className="border-t border-white/10 pt-4 mt-2">
-              <ToggleSetting
-                label="Strict Mode"
-                description="Prevents pausing during focus sessions (only Stop allowed)"
-                enabled={settings.strictMode}
-                onChange={(val) => updateSetting('strictMode', val)}
-              />
-              {settings.strictMode && (
-                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mt-2">
-                  <div className="flex gap-2 text-xs text-orange-400">
-                    <Lock size={14} className="flex-shrink-0 mt-0.5" />
-                    <span>Strict Mode is ON. You won't be able to pause during focus sessions.</span>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </SettingSection>
 
@@ -335,7 +301,7 @@ export function SettingsPage() {
               { value: 'light', label: 'Light' },
               { value: 'auto', label: 'System' }
             ]}
-            onChange={(val) => updateSetting('theme', val)}
+            onChange={(val) => updateSetting('theme', val as Settings['theme'])}
           />
           <SelectSetting
             label="Accent Color"
@@ -348,7 +314,7 @@ export function SettingsPage() {
               { value: 'orange', label: 'Orange' },
               { value: 'red', label: 'Red' }
             ]}
-            onChange={(val) => updateSetting('accentColor', val)}
+            onChange={(val) => updateSetting('accentColor', val as Settings['accentColor'])}
           />
         </SettingSection>
 
@@ -365,7 +331,7 @@ export function SettingsPage() {
             </div>
             <div className="flex justify-between py-2 border-b border-white/5">
               <span className="text-gray-400">Network</span>
-              <span className="text-white">Sui Devnet</span>
+              <span className="text-white">Sui Testnet</span>
             </div>
             <div className="flex justify-between py-2 border-b border-white/5">
               <span className="text-gray-400">Build</span>
@@ -378,52 +344,7 @@ export function SettingsPage() {
             </div>
           </div>
         </SettingSection>
-
-        {/* Danger Zone */}
-        <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
-              <LogOut size={20} className="text-red-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-white mb-1">Danger Zone</h3>
-              <p className="text-sm text-gray-400">These actions cannot be undone</p>
-            </div>
-          </div>
-          <div className="pl-14">
-            <button
-              onClick={handleDisconnect}
-              className="w-full py-3 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 border border-red-500/30"
-            >
-              <LogOut size={18} />
-              Disconnect Wallet & Sign Out
-            </button>
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              This will clear your session. Your on-chain data remains safe.
-            </p>
-          </div>
-        </div>
-
-        {/* Developer Tools Panel - REMOVE BEFORE MAINNET */}
-        <DevToolsPanel
-          onDebugSetHours={async (topicId, minutes) => {
-            // This is a mock handler - actual implementation would call the smart contract
-            console.log(`[DEBUG] Setting ${minutes} minutes for topic: ${topicId}`)
-            // In production, this would call:
-            // await suiClient.signAndExecuteTransaction(...)
-          }}
-        />
       </div>
-
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2">
-            <Save size={16} />
-            {toastMessage}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

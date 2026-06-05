@@ -220,6 +220,11 @@ module focus_forge::focus_block {
     public fun duration(block: &FocusBlock): u64 {
         block.duration
     }
+
+    /// Accessor for completion timestamp (ms)
+    public fun block_timestamp(block: &FocusBlock): u64 {
+        block.timestamp
+    }
     
     /// Accessor for idle detection status
     public fun idle_detection_enabled(block: &FocusBlock): bool {

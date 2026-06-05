@@ -5,6 +5,7 @@ module focus_forge::accountability_pool {
     use sui::table::{Self, Table};
     use sui::event;
     use sui::clock::{Self, Clock};
+    use focus_forge::focus_block::{Self, FocusBlock};
 
     // Errors
     const EPoolAlreadyStarted: u64 = 1;
@@ -14,6 +15,8 @@ module focus_forge::accountability_pool {
     const EAlreadyClaimed: u64 = 5;
     const EInvalidStake: u64 = 6;
     const ESubmissionWindowClosed: u64 = 7;
+    const EInsufficientFocus: u64 = 8;  // FocusBlock shorter than the pool target
+    const EWinnersExist: u64 = 10;      // refund only allowed when nobody won
 
     // Pool States
     const STATE_OPEN: u8 = 0;
@@ -142,10 +145,19 @@ module focus_forge::accountability_pool {
         });
     }
 
-    /// Submit proof of focus (simplification: just calling this method is the proof for now)
-    /// In reality, this would take a FocusBlock object ref or ID and verify it.
+    /// Submit a real proof of focus: a FocusBlock the caller owns whose duration
+    /// meets the pool's target, submitted during the execution window.
+    ///
+    /// Ownership is enforced implicitly — a PTB can only pass a FocusBlock the
+    /// sender owns. The duration check makes "winning" require an actual
+    /// completed focus session rather than a bare function call.
+    ///
+    /// LIMITATION: a single FocusBlock could satisfy multiple overlapping pools
+    /// (the block is referenced, not consumed). Acceptable for now; a stricter
+    /// design would burn the block or track per-pool usage.
     public entry fun submit_proof(
         pool: &mut Pool,
+        proof: &FocusBlock,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
@@ -153,14 +165,18 @@ module focus_forge::accountability_pool {
         let now = clock::timestamp_ms(clock);
 
         assert!(table::contains(&pool.participants, sender), ENotParticipant);
-        assert!(now >= pool.join_window_end && now <= pool.end_time, ESubmissionWindowClosed); // Can only submit during execution phase
-        
+        assert!(now >= pool.join_window_end && now <= pool.end_time, ESubmissionWindowClosed);
+
+        // FocusBlock.duration is in minutes; pool.target_duration is in ms.
+        let proof_ms = focus_block::duration(proof) * 60_000;
+        assert!(proof_ms >= pool.target_duration, EInsufficientFocus);
+
         // Mark as winner
         let has_submitted = table::borrow_mut(&mut pool.participants, sender);
         if (*has_submitted == false) {
             *has_submitted = true;
             pool.winner_count = pool.winner_count + 1;
-            
+
             event::emit(ProofSubmitted {
                 pool_id: object::id(pool),
                 participant: sender
@@ -212,7 +228,7 @@ module focus_forge::accountability_pool {
             let reward_coin = coin::from_balance(reward, ctx);
             
             transfer::public_transfer(reward_coin, sender);
-            
+
              event::emit(RewardClaimed {
                 pool_id: object::id(pool),
                 winner: sender,
@@ -222,4 +238,41 @@ module focus_forge::accountability_pool {
 
         table::add(&mut pool.has_claimed, sender, true);
     }
+
+    /// Reclaim your stake when a pool ended with NO winners.
+    ///
+    /// Without this, if nobody submitted a valid proof the entire pot would be
+    /// locked forever (claim_reward only pays winners). Each participant can pull
+    /// back exactly their own stake; pot = participant_count * stake_amount, so
+    /// the accounting balances out.
+    public entry fun reclaim_stake(
+        pool: &mut Pool,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let sender = ctx.sender();
+        let now = clock::timestamp_ms(clock);
+
+        assert!(now > pool.end_time, EPoolNotEnded);
+        assert!(pool.winner_count == 0, EWinnersExist);
+        assert!(table::contains(&pool.participants, sender), ENotParticipant);
+        assert!(!table::contains(&pool.has_claimed, sender), EAlreadyClaimed);
+
+        let refund = balance::split(&mut pool.pot, pool.stake_amount);
+        transfer::public_transfer(coin::from_balance(refund, ctx), sender);
+
+        table::add(&mut pool.has_claimed, sender, true);
+
+        event::emit(RewardClaimed {
+            pool_id: object::id(pool),
+            winner: sender,
+            amount: pool.stake_amount
+        });
+    }
+
+    // ======== Getters ========
+
+    public fun winner_count(pool: &Pool): u64 { pool.winner_count }
+    public fun participant_count(pool: &Pool): u64 { pool.participant_count }
+    public fun pot_value(pool: &Pool): u64 { balance::value(&pool.pot) }
 }

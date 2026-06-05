@@ -8,22 +8,21 @@ export interface Settings {
   longBreak: number
   autoStartBreaks: boolean
   autoStartFocus: boolean
-  strictMode: boolean // Prevents pausing, only stop allowed
-
+  
   // Idle Detection
   idleThreshold: number // in minutes
   idleDetectionEnabled: boolean
   activityMonitoring: boolean
-
+  
   // Privacy
   anonymousMode: boolean
   shareStats: boolean
-
+  
   // Notifications
   soundEnabled: boolean
   desktopNotifs: boolean
   sessionReminders: boolean
-
+  
   // Appearance
   theme: 'dark' | 'light' | 'auto'
   accentColor: 'blue' | 'purple' | 'green' | 'orange' | 'red'
@@ -40,7 +39,6 @@ const DEFAULT_SETTINGS: Settings = {
   longBreak: 15,
   autoStartBreaks: false,
   autoStartFocus: false,
-  strictMode: false,
   idleThreshold: 5,
   idleDetectionEnabled: true,
   activityMonitoring: true,
@@ -57,9 +55,9 @@ export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
       ...DEFAULT_SETTINGS,
-
+      
       updateSettings: (partial) => set((state) => ({ ...state, ...partial })),
-
+      
       resetSettings: () => set(DEFAULT_SETTINGS),
     }),
     {

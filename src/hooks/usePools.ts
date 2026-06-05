@@ -2,10 +2,27 @@
 import { Transaction } from '@mysten/sui/transactions'
 import { useSuiClient } from '@mysten/dapp-kit'
 import { useWalletStore } from '../store/useWalletStore'
+import { PACKAGE_ID, CLOCK_ID } from '../constants'
 
-// Updated Package ID with Settings Support (deployed 2025-12-06)
-const PACKAGE_ID = '0xd92e7706ce871ecc0247f19e03baf31beadb645e0cc2eee3fab516408c5655fd'
 const MODULE_NAME = 'accountability_pool'
+
+// Shape of the Move event payloads we read (parsedJson is loosely typed by the SDK)
+interface PoolEventJson {
+    pool_id?: string
+    participant?: string
+    winner?: string
+}
+
+// Parsed on-chain Pool summary returned by fetchPools (all numbers are u64
+// strings as delivered by the RPC).
+export interface PoolSummary {
+    id: string
+    stake_amount: string
+    participants: string
+    join_window_end: string
+    end_time: string
+    target_duration: string
+}
 
 export function usePools() {
     const client = useSuiClient()
@@ -20,8 +37,9 @@ export function usePools() {
 
         const tx = new Transaction()
 
-        // Convert SUI to MIST (10^9)
-        const stakeAmountMist = BigInt(stakeAmountSui * 1_000_000_000)
+        // Convert SUI to MIST (10^9). Round first: BigInt() throws on a
+        // non-integer float (e.g. 0.1 * 1e9 can produce fractional noise).
+        const stakeAmountMist = BigInt(Math.round(stakeAmountSui * 1_000_000_000))
 
         tx.moveCall({
             target: `${PACKAGE_ID}::${MODULE_NAME}::create_pool`,
@@ -30,7 +48,7 @@ export function usePools() {
                 tx.pure.u64(joinDurationMs),
                 tx.pure.u64(executionDurationMs),
                 tx.pure.u64(targetDurationMs),
-                tx.object('0x6') // Clock object is 0x6
+                tx.object(CLOCK_ID)
             ],
         })
 
@@ -70,7 +88,7 @@ export function usePools() {
         }
 
         const tx = new Transaction()
-        const stakeAmountMist = BigInt(stakeAmountSui * 1_000_000_000)
+        const stakeAmountMist = BigInt(Math.round(stakeAmountSui * 1_000_000_000))
 
         // Split coin for joining
         const [stakeCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(stakeAmountMist)])
@@ -80,7 +98,7 @@ export function usePools() {
             arguments: [
                 tx.object(poolId),
                 stakeCoin,
-                tx.object('0x6') // Clock object is 0x6
+                tx.object(CLOCK_ID)
             ],
         })
 
@@ -116,8 +134,9 @@ export function usePools() {
             }
 
             // 2. Extract Pool IDs
-            // @ts-ignore
-            const poolIds = events.data.map(e => e.parsedJson?.pool_id).filter(id => !!id)
+            const poolIds = events.data
+                .map(e => (e.parsedJson as PoolEventJson | undefined)?.pool_id)
+                .filter((id): id is string => !!id)
 
             // Deduplicate IDs
             const uniqueIds = [...new Set(poolIds)]
@@ -133,22 +152,21 @@ export function usePools() {
             })
 
             // 4. Parse Data
-            const pools = objects.map((obj: any) => {
+            const pools = objects.map((obj): PoolSummary | null => {
                 const content = obj.data?.content
                 if (content?.dataType === 'moveObject') {
-                    // @ts-ignore
-                    const fields = content.fields
+                    const fields = content.fields as Record<string, unknown>
                     return {
-                        id: obj.data?.objectId,
-                        stake_amount: fields.stake_amount,
-                        participants: fields.participant_count,
-                        join_window_end: fields.join_window_end,
-                        end_time: fields.end_time,
-                        target_duration: fields.target_duration
+                        id: obj.data?.objectId as string,
+                        stake_amount: fields.stake_amount as string,
+                        participants: fields.participant_count as string,
+                        join_window_end: fields.join_window_end as string,
+                        end_time: fields.end_time as string,
+                        target_duration: fields.target_duration as string
                     }
                 }
                 return null
-            }).filter((p: any) => !!p)
+            }).filter((p): p is PoolSummary => !!p)
 
             return pools
         } catch (e) {
@@ -175,8 +193,7 @@ export function usePools() {
 
             events.data.forEach(e => {
                 if (e.type === `${PACKAGE_ID}::${MODULE_NAME}::JoinedPool`) {
-                    // @ts-ignore
-                    const poolId = e.parsedJson?.pool_id
+                    const poolId = (e.parsedJson as PoolEventJson | undefined)?.pool_id
                     if (poolId) joinedPoolIds.add(poolId)
                 }
             })
@@ -202,13 +219,9 @@ export function usePools() {
 
             const proofPoolIds = new Set<string>()
             events.data.forEach(e => {
-                // @ts-ignore
-                const participant = e.parsedJson?.participant
-                // @ts-ignore
-                const poolId = e.parsedJson?.pool_id
-
-                if (participant === sender && poolId) {
-                    proofPoolIds.add(poolId)
+                const json = e.parsedJson as PoolEventJson | undefined
+                if (json?.participant === sender && json.pool_id) {
+                    proofPoolIds.add(json.pool_id)
                 }
             })
             return proofPoolIds
@@ -234,13 +247,9 @@ export function usePools() {
 
             const claimedPoolIds = new Set<string>()
             events.data.forEach(e => {
-                // @ts-ignore
-                const winner = e.parsedJson?.winner
-                // @ts-ignore
-                const poolId = e.parsedJson?.pool_id
-
-                if (winner === sender && poolId) {
-                    claimedPoolIds.add(poolId)
+                const json = e.parsedJson as PoolEventJson | undefined
+                if (json?.winner === sender && json.pool_id) {
+                    claimedPoolIds.add(json.pool_id)
                 }
             })
             return claimedPoolIds
@@ -250,14 +259,46 @@ export function usePools() {
         }
     }
 
-    const submitProof = async (poolId: string) => {
+    // submit_proof now requires a FocusBlock the user owns whose duration meets
+    // the pool target. We locate a qualifying block client-side and pass it in.
+    const submitProof = async (poolId: string, targetDurationMs: number) => {
         if (!keypair) return
+        const requiredMinutes = Math.ceil(targetDurationMs / 60000)
+
+        // Find an owned FocusBlock long enough to satisfy the pool target.
+        let proofBlockId: string | undefined
+        try {
+            const blocks = await client.getOwnedObjects({
+                owner: keypair.getPublicKey().toSuiAddress(),
+                filter: { StructType: `${PACKAGE_ID}::focus_block::FocusBlock` },
+                options: { showContent: true }
+            })
+            for (const b of blocks.data) {
+                const content = b.data?.content
+                if (content?.dataType === 'moveObject') {
+                    const fields = content.fields as Record<string, unknown>
+                    if (Number(fields.duration) >= requiredMinutes) {
+                        proofBlockId = b.data?.objectId
+                        break
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load focus blocks:", e)
+        }
+
+        if (!proofBlockId) {
+            alert(`No qualifying Focus Block found. Complete a ${requiredMinutes}min focus session first, then submit proof.`)
+            return
+        }
+
         const tx = new Transaction()
         tx.moveCall({
             target: `${PACKAGE_ID}::${MODULE_NAME}::submit_proof`,
             arguments: [
                 tx.object(poolId),
-                tx.object('0x6')
+                tx.object(proofBlockId),
+                tx.object(CLOCK_ID)
             ]
         })
         try {
@@ -276,7 +317,7 @@ export function usePools() {
             target: `${PACKAGE_ID}::${MODULE_NAME}::claim_reward`,
             arguments: [
                 tx.object(poolId),
-                tx.object('0x6')
+                tx.object(CLOCK_ID)
             ]
         })
         try {
